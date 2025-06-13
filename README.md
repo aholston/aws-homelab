@@ -41,14 +41,15 @@ aws-homelab/
 Start by defining the VPC, subnets, route tables, and access boundaries.
 
 * See: `networking/vpc-design.md`
-![VPC Architecture](diagrams/vpc-architecture.png)
 
 ---
 
 ## 🚧 Roadmap
 
 * [x] Define VPC + Subnet structure
-* [ ] Provision VPC and subnets
+* [x] Provision VPC and subnets
+* [x] Create and associate public route table
+* [x] Create and associate private route table
 * [ ] Set up IAM users and roles
 * [ ] Deploy EC2 jumpbox in public subnet
 * [ ] Enable CloudTrail and CloudWatch
