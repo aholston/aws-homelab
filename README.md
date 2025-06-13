@@ -1,73 +1,123 @@
-# AWS Homelab
+# AWS Homelab: Network Design (Phase 1)
 
-Welcome to your personal AWS Homelab — a secure, hands-on environment designed to simulate real-world AWS architecture and cloud security practices. This project is built from the ground up to deepen your knowledge, prepare for certifications, and showcase your skills in a clean, well-documented portfolio.
+## Overview
 
----
-
-## 📌 Purpose
-
-* Learn AWS infrastructure and security fundamentals by doing
-* Simulate real-world environments with a focus on secure design
-* Document everything for easy recall and future job interviews
-* Build a public-facing portfolio of cloud and security skills
+This document outlines the initial network design and provisioning steps for a secure AWS homelab environment. It serves as a foundation for learning AWS architecture, implementing cloud security best practices, and creating a well-documented portfolio.
 
 ---
 
-## 📁 Folder Structure
+## Goals
 
-```
-aws-homelab/
-├── README.md                      ← Overview of your lab + goals
-├── diagrams/                     ← Visuals of architecture and flows
-│   └── vpc-architecture.png
-├── networking/                   ← Subnet, VPC, and routing design
-│   └── vpc-design.md
-├── compute/                      ← EC2 setup and server documentation
-│   └── ec2-jumpbox.md
-├── identity/                     ← IAM structure, users, and policies
-│   └── iam-roles.md
-├── security/                     ← Logging, monitoring, and detection
-│   └── cloudtrail-setup.md
-├── simulations/                  ← Attack/incident scenarios + notes
-│   └── compromised-user-case.md
-└── terraform/ (optional)         ← Infrastructure-as-code configuration
-    └── vpc.tf
-```
+* Simulate a realistic production-lite cloud environment
+* Learn and apply AWS networking and security fundamentals
+* Build a clear, extensible foundation for future services and attack simulations
 
 ---
 
-## ✅ Current Phase: Network Design
+## VPC Design
 
-Start by defining the VPC, subnets, route tables, and access boundaries.
+* **CIDR Block:** `10.0.0.0/16`
+* **Availability Zone:** `us-east-1a`
+* **Region:** `us-east-1`
 
-* See: `networking/vpc-design.md`
-
----
-
-## 🚧 Roadmap
-
-* [x] Define VPC + Subnet structure
-* [x] Provision VPC and subnets
-* [x] Create and associate public route table
-* [x] Create and associate private route table
-* [ ] Set up IAM users and roles
-* [ ] Deploy EC2 jumpbox in public subnet
-* [ ] Enable CloudTrail and CloudWatch
-* [ ] Create and test access policies
-* [ ] Simulate first security event
+This CIDR block gives 65,536 IPs and supports plenty of future subnetting and experimentation.
 
 ---
 
-## 🧠 Tips
+## Subnet Layout
 
-* Keep each phase modular — clean files, clear boundaries
-* Comment your decisions — this is a portfolio, not just a project
-* Prioritize realism: security-first, no shortcuts unless noted
+| Subnet Name      | CIDR Block    | AZ           | Purpose                | Public? |
+| ---------------- | ------------- | ------------ | ---------------------- | ------- |
+| Public Subnet A  | `10.0.1.0/24` | `us-east-1a` | Jumpbox / Bastion host | ✅       |
+| Private Subnet A | `10.0.2.0/24` | `us-east-1a` | App server or backend  | ❌       |
+
+These subnets are split logically by exposure:
+
+* Public subnet has a route to the internet via an **Internet Gateway**
+* Private subnet does **not** have outbound internet access
 
 ---
 
-## 📎 Notes
+## Routing Strategy
 
-This homelab is a living project. As you add services (S3, Lambda, WAF, etc.), expand the folder structure and docs to match.
+### Route Tables
 
-When you’re ready to make it public-facing, you can drop this into GitHub with a polished README and architecture diagram.
+* **Public Route Table**
+
+  * Associated with: Public Subnet A
+  * Routes:
+
+    * `10.0.0.0/16` → `local`
+    * `0.0.0.0/0` → Internet Gateway
+
+* **Private Route Table**
+
+  * Associated with: Private Subnet A
+  * Routes:
+
+    * `10.0.0.0/16` → `local`
+
+This ensures public instances can reach the internet, while private ones remain isolated.
+
+---
+
+## Planned EC2 Resources
+
+| Instance Name | Subnet           | Purpose                      |
+| ------------- | ---------------- | ---------------------------- |
+| Jumpbox EC2   | Public Subnet A  | Secure admin access via SSM  |
+| App/DB EC2    | Private Subnet A | Internal service or database |
+
+Jumpbox access will be via **AWS Systems Manager (SSM)**. No SSH, public IPs, or key pairs are required. Private EC2s will not be publicly accessible.
+
+---
+
+## IAM Considerations
+
+| Role/User           | Purpose                       | Scope                                            |
+| ------------------- | ----------------------------- | ------------------------------------------------ |
+| Admin IAM User      | Full account admin (not root) | AdministratorAccess + MFA                        |
+| Jumpbox IAM Role    | Attach to EC2                 | SSM access only (`AmazonSSMManagedInstanceCore`) |
+| App Server IAM Role | Attach to private EC2         | Least privilege for app needs                    |
+
+MFA will be enforced for all IAM users. Root account will be locked down.
+
+---
+
+## Security Tools To Be Added Later
+
+* AWS CloudTrail (auditing)
+* AWS Config (baseline compliance)
+* GuardDuty (threat detection)
+* CloudWatch Alarms (visibility)
+* Simulated attack exercises (e.g., compromised keys, open ports)
+
+---
+
+## Implementation Notes
+
+* VPC created with CIDR `10.0.0.0/16`
+* Public subnet `10.0.1.0/24` created with auto-assign public IPs enabled
+* Internet Gateway (`homelab-igw`) created and attached to the VPC
+* Public route table created and associated with public subnet
+* Route `0.0.0.0/0 → IGW` added to public route table
+* Private subnet `10.0.2.0/24` created with no public IP auto-assignment
+* Private route table created and associated with private subnet
+* Private route table only contains local VPC routing
+* Jumpbox EC2 instance uses SSM for secure access, not SSH
+* EC2 IAM Role includes `AmazonSSMManagedInstanceCore` policy
+* SSM access verified through the AWS Console
+
+---
+
+## Next Steps
+
+* [x] Deploy a jumpbox in the public subnet
+* [x] Test connectivity and isolation between instances
+* [ ] Begin setting up IAM roles and CloudTrail logging
+
+---
+
+## Notes
+
+This document will evolve as the lab grows. All design choices aim for clarity, realism, and security. Portfolio-ready visuals and architecture diagrams are included in the `diagrams/` folder.

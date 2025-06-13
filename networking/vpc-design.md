@@ -65,28 +65,28 @@ This ensures public instances can reach the internet, while private ones remain 
 
 | Instance Name | Subnet           | Purpose                      |
 | ------------- | ---------------- | ---------------------------- |
-| Jumpbox EC2   | Public Subnet A  | Secure admin access          |
+| Jumpbox EC2   | Public Subnet A  | Secure admin access via SSM  |
 | App/DB EC2    | Private Subnet A | Internal service or database |
 
-Jumpbox access will be via SSH or AWS Systems Manager (SSM). Private EC2s will not be publicly accessible.
+Jumpbox access will be via **AWS Systems Manager (SSM)**. No SSH, public IPs, or key pairs are required. Private EC2s will not be publicly accessible.
 
 ---
 
 ## IAM Considerations
 
-| Role/User           | Purpose                       | Scope                         |
-| ------------------- | ----------------------------- | ----------------------------- |
-| Admin IAM User      | Full account admin (not root) | AdministratorAccess + MFA     |
-| Jumpbox IAM Role    | Attach to EC2                 | SSM + logs only               |
-| App Server IAM Role | Attach to private EC2         | Least privilege for app needs |
+| Role/User           | Purpose                       | Scope                                            |
+| ------------------- | ----------------------------- | ------------------------------------------------ |
+| Admin IAM User      | Full account admin (not root) | AdministratorAccess + MFA                        |
+| Jumpbox IAM Role    | Attach to EC2                 | SSM access only (`AmazonSSMManagedInstanceCore`) |
+| App Server IAM Role | Attach to private EC2         | Least privilege for app needs                    |
 
-MFA will be enforced for all IAM users. Root account will be locked down.
+MFA will be enforced for all IAM users. Root account will be locked down and no longer used for daily access. A new IAM user (`andre-admin`) has been created for all console and CLI interactions.
 
 ---
 
 ## Security Tools To Be Added Later
 
-* AWS CloudTrail (auditing)
+* AWS CloudTrail (✅ Configured)
 * AWS Config (baseline compliance)
 * GuardDuty (threat detection)
 * CloudWatch Alarms (visibility)
@@ -104,14 +104,23 @@ MFA will be enforced for all IAM users. Root account will be locked down.
 * Private subnet `10.0.2.0/24` created with no public IP auto-assignment
 * Private route table created and associated with private subnet
 * Private route table only contains local VPC routing
+* Jumpbox EC2 instance uses SSM for secure access, not SSH
+* EC2 IAM Role includes `AmazonSSMManagedInstanceCore` policy
+* SSM access verified through the AWS Console
+* IAM user `andre-admin` created with `AdministratorAccess` and MFA enabled
+* Root user access disabled for all operational tasks
+* CloudTrail trail `homelab-cloudtrail` enabled, multi-region, with log file validation and default S3 encryption
 
 ---
 
 ## Next Steps
 
-* Deploy a jumpbox in the public subnet
-* Test connectivity and isolation between instances
-* Begin setting up IAM roles and CloudTrail logging
+* [x] Deploy a jumpbox in the public subnet
+* [x] Test connectivity and isolation between instances
+* [x] Create IAM admin user and enforce MFA
+* [x] Begin setting up CloudTrail logging
+* [ ] Define app server IAM role
+* [ ] Begin enabling GuardDuty and baseline alerting
 
 ---
 
